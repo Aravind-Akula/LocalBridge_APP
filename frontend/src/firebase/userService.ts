@@ -1,8 +1,3 @@
-
-
-
-// src/firebase/userService.ts
-
 import {
   doc,
   getDoc,
@@ -10,55 +5,80 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { db } from "./firebaseConfig";
+import { db } from "./config";
 
-/* =========================
-   TYPES
-========================= */
+type Role = "worker" | "owner";
 
-export type UserProfile = {
-  name: string;
-  phone: string;
-  roles: ("owner" | "worker")[];
-  activeRole: "owner" | "worker";
-  skills: string[];
-  createdAt?: any;
-};
-
-/* =========================
-   CREATE USER PROFILE
-========================= */
-export async function createUserProfile(
-  uid: string,
-  data: UserProfile
-) {
-  const ref = doc(db, "users", uid);
-
-  await setDoc(ref, {
-    ...data,
-    createdAt: serverTimestamp(),
-  });
-}
-
-/* =========================
-   GET USER PROFILE
-========================= */
-export async function getUserProfile(uid: string) {
+/* ================= GET USER BY UID ================= */
+// ✅ THIS WAS MISSING — REQUIRED BY AuthContext
+export async function getUserByUid(uid: string) {
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
 
-  if (!snap.exists()) return null;
+  if (!snap.exists()) {
+    throw new Error("User not found for uid: " + uid);
+  }
 
-  return snap.data();
+  return {
+    uid,
+    ...snap.data(),
+  };
 }
 
-/* =========================
-   UPDATE ACTIVE ROLE
-========================= */
+/* ================= GET OR CREATE USER ================= */
+export async function getOrCreateUser({
+  name,
+  phone,
+}: {
+  name: string;
+  phone: string;
+}) {
+  const ref = doc(db, "users", phone);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    return {
+      uid: phone,
+      ...snap.data(),
+    };
+  }
+
+  const newUser = {
+    name,
+    phone,
+    roles: [],
+    activeRole: null,
+    skills: {},
+    createdAt: serverTimestamp(),
+  };
+
+  await setDoc(ref, newUser);
+
+  return {
+    uid: phone,
+    ...newUser,
+  };
+}
+
+/* ================= UPDATE ACTIVE ROLE ================= */
 export async function updateActiveRole(
   uid: string,
-  role: "owner" | "worker"
+  activeRole: Role
 ) {
-  const ref = doc(db, "users", uid);
-  await updateDoc(ref, { activeRole: role });
+  await updateDoc(doc(db, "users", uid), {
+    activeRole,
+  });
+}
+
+
+
+export async function updateUserRoles(
+  uid: string,
+  roles: string[],
+  activeRole: string
+) {
+  await updateDoc(doc(db, "users", uid), {
+    roles,
+    activeRole,
+  });
 }

@@ -1,16 +1,10 @@
-import Navbar from "../components/Navbar";
+import { Outlet } from "react-router-dom";
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout() {
   return (
-    <>
-      <Navbar />
-      <main className="max-w-7xl mx-auto px-6 py-6">
-        {children}
-      </main>
-    </>
+    <main className="pt-6 pb-10">
+      <Outlet />
+    </main>
   );
 }
+

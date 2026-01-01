@@ -1,71 +1,67 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Home from "./pages/HOME";
 import Login from "./pages/Login";
-import OwnerDashboard from "./pages/owner/OwnerDashboard";
-import WorkerDashboard from "./pages/worker/WorkerDashboard";
-import ProtectedRoute from "./components/ProtectedRoute";
-import CreateProfile from "./pages/CreateProfile";
-import PostJob from "./pages/owner/PostJob";
+import Profile from "./pages/Profile";
+import SelectRole from "./pages/SelectRole";
+
 import AddSkills from "./pages/worker/AddSkills";
+import WorkerDashboard from "./pages/worker/WorkerDashboard";
+
+import OwnerDashboard from "./pages/owner/OwnerDashboard";
+import PostJob from "./pages/owner/PostJob";
+import OwnerApplications from "./pages/owner/OwnerApplications";
+
+import ProtectedRoute from "./components/ProtectedRoute";
+import MainLayout from "./layouts/MainLayout";
+import DashboardLayout from "./layouts/DashboardLayout";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ✅ HOME as default */}
-        <Route path="/" element={<Home />} />
 
-        {/* Public */}
-        <Route path="/login" element={<Login />} />
+        {/* ===== MAIN LAYOUT (Navbar once) ===== */}
+        <Route element={<MainLayout />}>
 
-        <Route path="/create-profile" element={<CreateProfile />} />
-        {/* Protected */}
-        <Route
-          path="/worker/add-skills"
-          element={
-            <ProtectedRoute role="worker">
-              <AddSkills />
-            </ProtectedRoute>
-          }
-        />
+          {/* Public */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
 
-        <Route
-          path="/owner/dashboard"
-          element={
-            <ProtectedRoute role="owner">
-              <OwnerDashboard />
-            </ProtectedRoute>
-          }
-        />
+          {/* 🔐 ROLE SELECTION (AFTER LOGIN) */}
 
-        <Route
-          path="/worker/dashboard"
-          element={
-            <ProtectedRoute role="worker">
-              <WorkerDashboard />
-            </ProtectedRoute>
-          }
-        />
+          <Route path="/select-role" element={<SelectRole />} />
+          <Route path="/profile" element={<Profile />} />
+          {/* Profile */}
 
-        <Route
-          path="/owner/post-job"
-          element={
-            <ProtectedRoute role="owner">
-              <PostJob />
-            </ProtectedRoute>
-          }
-        />
+          {/* Worker */}
+          <Route
+            path="/worker"
+            element={
+              <ProtectedRoute role="worker">
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="dashboard" element={<WorkerDashboard />} />
+            <Route path="add-skills" element={<AddSkills />} />
+          </Route>
 
-        <Route
-          path="/worker/add-skills"
-          element={
-            <ProtectedRoute role="worker">
-              <AddSkills />
-            </ProtectedRoute>
-          }
-        />
+          {/* Owner */}
+          <Route
+            path="/owner"
+            element={
+              <ProtectedRoute role="owner">
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="dashboard" element={<OwnerDashboard />} />
+            <Route path="applications" element={<OwnerApplications />} />
+            <Route path="post-job" element={<PostJob />} />
+          </Route>
 
-
+        </Route>
 
       </Routes>
     </BrowserRouter>

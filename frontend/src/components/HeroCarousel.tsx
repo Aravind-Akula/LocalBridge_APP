@@ -5,29 +5,38 @@ import Autoplay from "embla-carousel-autoplay";
 const slides = [
   {
     image: "/Images/Vegitable_Farming.png",
-    title: "Trusted Local Farming Workers",
-    desc: "Hire skilled workers for every farming need",
+    title: "Local Farming Workers",
+    desc: "Skilled help for daily agricultural work",
   },
   {
     image: "/Images/Farming.png",
-    title: "Reliable Agricultural Services",
-    desc: "Experienced workers for crops & land care",
+    title: "Agricultural Services",
+    desc: "Trusted workers for crops & land care",
   },
   {
     image: "/Images/Reliable_Services.png",
-    title: "Reliable Home Services",
-    desc: "Plumbing, electrician, repairs & more",
+    title: "Home Services",
+    desc: "Plumbing, electrical & repairs",
   },
   {
     image: "/Images/Construction.png",
-    title: "Construction Services",
-    desc: "Masons, painters, helpers & more",
+    title: "Construction Work",
+    desc: "Masons, painters & helpers",
   },
+  {
+    image: "/Images/Events_Carousal.png",
+    title: "Event Support",
+    desc: "Catering, lighting & decoration",
+  }
 ];
 
-export default function HeroCarousel() {
+export default function HeroCarousel({
+  minimalText = false,
+}: {
+  minimalText?: boolean;
+}) {
   const autoplay = useRef(
-    Autoplay({ delay: 3000, stopOnInteraction: false })
+    Autoplay({ delay: 2500, stopOnInteraction: false })
   );
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
@@ -50,7 +59,7 @@ export default function HeroCarousel() {
 
   return (
     <div
-      className="relative"
+      className="relative rounded-2xl overflow-hidden"
       onMouseEnter={() => autoplay.current.stop()}
       onMouseLeave={() => autoplay.current.play()}
     >
@@ -58,35 +67,45 @@ export default function HeroCarousel() {
       <div ref={emblaRef} className="overflow-hidden">
         <div className="flex">
           {slides.map((s, i) => (
-            <div key={i} className="flex-[0_0_100%] relative">
-              
+            <div
+              key={i}
+              className="flex-[0_0_100%] relative"
+            >
               {/* IMAGE */}
               <img
                 src={s.image}
                 alt={s.title}
-                className="w-full aspect-[16/9] object-cover object-center"
+                className="w-full aspect-[16/9] object-cover"
               />
 
-              {/* OVERLAY */}
-              <div className="absolute inset-0 bg-black/40 flex items-center">
-                <div className="max-w-7xl mx-auto px-6 text-white">
-                  <h1 className="text-4xl font-bold">{s.title}</h1>
-                  <p className="mt-2 text-lg">{s.desc}</p>
-                </div>
-              </div>
+              {/* SOFT GRADIENT OVERLAY */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
 
+              {/* TEXT – SUBTLE & APP-LIKE */}
+              {!minimalText && (
+                <div className="absolute bottom-6 left-6 right-6">
+                  <div className="max-w-md">
+                    <h2 className="text-white text-xl font-semibold leading-snug">
+                      {s.title}
+                    </h2>
+                    <p className="text-white/80 text-sm mt-1">
+                      {s.desc}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
       </div>
 
       {/* DOTS */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+      <div className="absolute bottom-4 right-6 flex gap-2">
         {slides.map((_, i) => (
           <button
             key={i}
             onClick={() => emblaApi?.scrollTo(i)}
-            className={`w-3 h-3 rounded-full transition ${
+            className={`w-2.5 h-2.5 rounded-full transition-all ${
               i === selectedIndex
                 ? "bg-white scale-110"
                 : "bg-white/50"
