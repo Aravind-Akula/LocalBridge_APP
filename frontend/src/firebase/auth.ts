@@ -1,32 +1,19 @@
-import {
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  ConfirmationResult,
-} from "firebase/auth";
-import { auth } from "./config";
+// // src/firebase/auth.ts
+// import { getAuth } from "firebase/auth";
+// import { initializeApp } from "firebase/app";
 
-let confirmationResult: ConfirmationResult | null = null;
+// /* 🔐 Firebase config */
+// const firebaseConfig = {
+//   apiKey: "xxx",
+//   authDomain: "xxx",
+//   projectId: "xxx",
+//   storageBucket: "xxx",
+//   messagingSenderId: "xxx",
+//   appId: "xxx",
+// };
 
-export function setupRecaptcha(containerId: string) {
-  if ((window as any).recaptchaVerifier) return;
+// /* ✅ Initialize app ONCE */
+// const app = initializeApp(firebaseConfig);
 
-  (window as any).recaptchaVerifier = new RecaptchaVerifier(
-    auth,
-    containerId,
-    {
-      size: "invisible",
-    }
-  );
-}
-
-export async function sendOTP(phone: string) {
-  const appVerifier = (window as any).recaptchaVerifier;
-  confirmationResult = await signInWithPhoneNumber(auth, phone, appVerifier);
-}
-
-export async function verifyOTP(code: string) {
-  if (!confirmationResult) {
-    throw new Error("OTP not requested yet");
-  }
-  return confirmationResult.confirm(code);
-}
+// /* ✅ EXPORT auth (THIS WAS MISSING) */
+// export const auth = getAuth(app);

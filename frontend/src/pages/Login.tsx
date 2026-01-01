@@ -1,117 +1,145 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { auth } from "../firebase/config";
+import { useAuth } from "../context/AuthContext";
+import { getOrCreateUser } from "../firebase/userService";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import {
-  getUserProfile,
-} from "../firebase/userService";
+
+const DEV_PHONE = "9999999999";
+const DEV_OTP = "123456";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const [name, setName] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"mobile" | "otp">("mobile");
+  const [otpSent, setOtpSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  /* ================= SEND OTP (MOCK) ================= */
-  const sendOtp = () => {
-    if (!name.trim()) {
-      alert("Please enter your name");
+  const confirmationRef = useRef<any>(null);
+
+  useEffect(() => {
+    setOtp("");
+    setOtpSent(false);
+  }, [phone]);
+
+  /* ===== SEND OTP ===== */
+  const handleSendOtp = async () => {
+    setError("");
+
+    if (!name.trim()) return setError("Name required");
+    if (phone.length !== 10) return setError("Invalid phone");
+
+    if (phone === DEV_PHONE) {
+      setOtpSent(true);
       return;
     }
 
-    if (!/^[6-9]\d{9}$/.test(mobile)) {
-      alert("Enter a valid 10-digit Indian mobile number");
-      return;
-    }
+    try {
+      setLoading(true);
 
-    alert("OTP sent (use 123456)");
-    setStep("otp");
-  };
+      if (!(window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(
+          auth,
+          "recaptcha-container",
+          { size: "invisible" }
+        );
+      }
 
-  /* ================= VERIFY OTP (MOCK) ================= */
-  const verifyOtp = async () => {
-    if (otp !== "123456") {
-      alert("Invalid OTP");
-      return;
-    }
-
-    const fakeUser = {
-      uid: "local-uid-" + mobile,
-      name,
-      phone: "+91" + mobile,
-    };
-
-    // 1️⃣ Fetch profile from Firestore
-    const profile = await getUserProfile(fakeUser.uid);
-
-    // 2️⃣ Save session locally (minimal data)
-    localStorage.setItem(
-      "auth",
-      JSON.stringify({
-        uid: fakeUser.uid,
-        name: fakeUser.name,
-        phone: fakeUser.phone,
-        role: profile?.activeRole,
-      })
-    );
-
-    // 3️⃣ Smart redirect
-    if (!profile) {
-      navigate("/create-profile");
-    } else {
-      navigate(
-        profile.activeRole === "worker"
-          ? "/worker/dashboard"
-          : "/owner/dashboard"
+      confirmationRef.current = await signInWithPhoneNumber(
+        auth,
+        `+91${phone}`,
+        (window as any).recaptchaVerifier
       );
+
+      setOtpSent(true);
+    } catch {
+      setError("OTP failed");
+    } finally {
+      setLoading(false);
     }
   };
 
-  /* ================= UI ================= */
+  /* ===== VERIFY OTP ===== */
+  const handleVerifyOtp = async () => {
+    setError("");
+    if (otp.length !== 6) return setError("Invalid OTP");
+
+    /* DEV LOGIN */
+    if (import.meta.env.DEV && phone === DEV_PHONE) {
+      if (otp !== DEV_OTP) return setError("Invalid OTP");
+
+      const userFromDb = await getOrCreateUser({ name, phone });
+
+      if (!userFromDb.roles || userFromDb.roles.length === 0) {
+        setUser({ ...userFromDb, roles: [], activeRole: null });
+        navigate("/select-role", { replace: true });
+        return;
+      }
+
+      setUser(userFromDb);
+      navigate(
+        userFromDb.activeRole === "worker"
+          ? "/worker/dashboard"
+          : "/owner/dashboard",
+        { replace: true }
+      );
+      return;
+    }
+
+    /* PROD LOGIN */
+    try {
+      setLoading(true);
+      await confirmationRef.current.confirm(otp);
+
+      const userFromDb = await getOrCreateUser({ name, phone });
+
+      if (!userFromDb.roles || userFromDb.roles.length === 0) {
+        setUser({ ...userFromDb, roles: [], activeRole: null });
+        navigate("/select-role", { replace: true });
+        return;
+      }
+
+      setUser(userFromDb);
+      navigate(
+        userFromDb.activeRole === "worker"
+          ? "/worker/dashboard"
+          : "/owner/dashboard",
+        { replace: true }
+      );
+    } catch {
+      setError("OTP verification failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-lg p-6 space-y-4">
-        <h1 className="text-2xl font-bold text-center">Login</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="bg-white p-6 rounded-xl w-full max-w-sm space-y-4">
+        <h2 className="text-xl font-bold text-center">Local Bridge</h2>
 
-        {step === "mobile" && (
-          <>
-            <Input
-              placeholder="Your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+        <Input value={name} disabled={otpSent} onChange={e => setName(e.target.value)} placeholder="Name" />
+        <Input value={phone} disabled={otpSent} onChange={e => setPhone(e.target.value.replace(/\D/g, ""))} maxLength={10} placeholder="Phone" />
 
-            <Input
-              placeholder="Mobile number"
-              maxLength={10}
-              value={mobile}
-              onChange={(e) =>
-                setMobile(e.target.value.replace(/\D/g, ""))
-              }
-            />
-
-            <Button className="w-full" onClick={sendOtp}>
-              Send OTP
-            </Button>
-          </>
+        {otpSent && (
+          <Input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ""))} maxLength={6} placeholder="OTP" />
         )}
 
-        {step === "otp" && (
-          <>
-            <Input
-              placeholder="Enter OTP (123456)"
-              maxLength={6}
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-            />
+        {error && <p className="text-red-500 text-sm">{error}</p>}
 
-            <Button className="w-full" onClick={verifyOtp}>
-              Verify & Login
-            </Button>
-          </>
+        {!otpSent ? (
+          <Button onClick={handleSendOtp}>Send OTP</Button>
+        ) : (
+          <Button onClick={handleVerifyOtp}>Verify</Button>
         )}
+
+        <div id="recaptcha-container" />
       </div>
     </div>
   );

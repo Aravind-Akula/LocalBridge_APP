@@ -1,34 +1,26 @@
-import { Navigate } from "react-router-dom";
-import { useAuthSync } from "../hooks/useAuthSync";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-export default function ProtectedRoute({
-  role,
-  children,
-}: {
-  role: "owner" | "worker";
-  children: JSX.Element;
-}) {
-  const { user, loading } = useAuthSync();
+export default function ProtectedRoute() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
 
-  /* ⏳ WAIT — DO NOT RENDER ANYTHING YET */
-  if (loading) {
-    return <div className="p-6 text-gray-600">Loading...</div>;
-  }
+  if (loading) return null;
 
+  // 🔐 Not logged in
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.activeRole !== role) {
-    return (
-      <Navigate
-        to={user.activeRole === "worker"
-          ? "/worker/dashboard"
-          : "/owner/dashboard"}
-        replace
-      />
-    );
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+
+  // ✅ ALLOW select-role page itself
+  if (
+    roles.length === 0 &&
+    location.pathname !== "/select-role"
+  ) {
+    return <Navigate to="/select-role" replace />;
   }
 
-  return children;
+  return <Outlet />;
 }

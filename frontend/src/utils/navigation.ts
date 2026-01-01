@@ -1,39 +1,39 @@
-// src/utils/navigation.ts
+import type { NavigateFunction } from "react-router-dom";
 
-export function navigateByAuth(navigate: any) {
-  const raw = localStorage.getItem("auth");
+/**
+ * Read persisted auth snapshot written by AuthContext
+ */
+function getAuthSnapshot() {
+  try {
+    const raw = localStorage.getItem("auth");
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
 
-  if (!raw) {
+/**
+ * Used by Home page buttons:
+ * - Get Started
+ * - Category cards
+ */
+export function navigateByAuth(navigate: NavigateFunction) {
+  const user = getAuthSnapshot();
+
+  // ❌ Not logged in
+  if (!user) {
     navigate("/login");
     return;
   }
 
-  const user = JSON.parse(raw);
-
-  /**
-   * EXPECTED AUTH SHAPE
-   * {
-   *   uid,
-   *   name,
-   *   phone,
-   *   roles: ["owner", "worker"],
-   *   activeRole: "owner" | "worker"
-   * }
-   */
-
-  // 🔐 If roles not created yet → profile incomplete
-  if (!user.roles || user.roles.length === 0) {
-    navigate("/create-profile");
+  // ❌ Logged in but role not selected yet
+  if (!user.activeRole) {
+    navigate("/select-role");
     return;
   }
 
-  // 🧠 AUTO-SELECT ROLE if missing (CRITICAL FIX)
-  if (!user.activeRole) {
-    user.activeRole = user.roles[0];
-    localStorage.setItem("auth", JSON.stringify(user));
-  }
-
-  // 🚀 Route by active role
+  // ✅ Go to correct dashboard
   if (user.activeRole === "worker") {
     navigate("/worker/dashboard");
   } else {
@@ -42,8 +42,26 @@ export function navigateByAuth(navigate: any) {
 }
 
 /**
- * Optional helper (used for logo click / Get Started)
+ * Used by:
+ * - Post a Job
+ * - Find Work
  */
-export function goToApp(navigate: any) {
-  navigateByAuth(navigate);
+export function goToApp(navigate: NavigateFunction) {
+  const user = getAuthSnapshot();
+
+  if (!user) {
+    navigate("/login");
+    return;
+  }
+
+  if (!user.activeRole) {
+    navigate("/select-role");
+    return;
+  }
+
+  navigate(
+    user.activeRole === "worker"
+      ? "/worker/dashboard"
+      : "/owner/dashboard"
+  );
 }

@@ -1,201 +1,113 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { doc, updateDoc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase/firebaseConfig";
-import DashboardLayout from "../../layouts/DashboardLayout";
-import { Button } from "../../components/ui/button";
 
-/* ================= SKILLS CATALOG ================= */
-const SKILLS: Record<string, string[]> = {
+const SKILLS = {
   farming: [
-    "Paddy Cropping",
-    "Cotton Cropping",
-    "Fertilizer Spreading",
-    "Removing Weeds",
-    "Tractor Service",
-    "Harvesting",
-    "Seed Planting",
-    "Vegetable Picking",
-    "Cotton Picking",
-    "Corn Seeding",
-    "Sugarcane Cutting",
-    "Other",
+    "Paddy Cropping", "Cotton Cropping", "Fertilizer Spreading",
+    "Harvesting", "Tractor Service", "Seed Planting", "Other"
   ],
   home: [
-    "Plumbing",
-    "Electrician",
-    "Carpentry",
-    "Cleaning",
-    "Appliance Repair",
-    "Painting",
-    "Other",
+    "Plumbing", "Electrician", "Carpentry",
+    "Cleaning", "Painting", "Appliance Repair", "Other"
   ],
   construction: [
-    "Mason",
-    "Painter",
-    "Helper",
-    "Welder",
-    "Carpenter",
-    "Electrician",
-    "Other",
+    "Mason", "Painter", "Helper", "Welder", "Electrician", "Other"
   ],
   events: [
-    "Tent House",
-    "Catering",
-    "Lighting",
-    "Decoration",
-    "Sound System",
-    "Photography",
-    "Other",
+    "Tent House", "Catering", "Lighting",
+    "Decoration", "Sound System", "Photography", "Other"
   ],
 };
-
-/* ================= SAFE DEFAULT ================= */
-const EMPTY_SKILLS = {
-  farming: [],
-  home: [],
-  construction: [],
-  events: [],
-};
-
-/* ================= NORMALIZER ================= */
-function normalizeSkills(data: any) {
-  return {
-    farming: Array.isArray(data?.farming) ? data.farming : [],
-    home: Array.isArray(data?.home) ? data.home : [],
-    construction: Array.isArray(data?.construction)
-      ? data.construction
-      : [],
-    events: Array.isArray(data?.events) ? data.events : [],
-  };
-}
 
 export default function AddSkills() {
   const navigate = useNavigate();
-  const auth = JSON.parse(localStorage.getItem("auth") || "null");
+  const [selected, setSelected] = useState<Record<string, string[]>>({});
+  const [openSection, setOpenSection] = useState<keyof typeof SKILLS>("farming");
 
-  const [selected, setSelected] =
-    useState<Record<string, string[]>>(EMPTY_SKILLS);
-
-  const [loading, setLoading] = useState(false);
-
-  /* ================= LOAD EXISTING SKILLS ================= */
-  useEffect(() => {
-    const loadSkills = async () => {
-      if (!auth?.uid) return;
-
-      const snap = await getDoc(doc(db, "users", auth.uid));
-
-      if (snap.exists()) {
-        setSelected(normalizeSkills(snap.data().skills));
-      } else {
-        setSelected(EMPTY_SKILLS);
-      }
-    };
-
-    loadSkills();
-  }, [auth?.uid]);
-
-  /* ================= TOGGLE SKILL ================= */
-  const toggleSkill = (group: string, skill: string) => {
-    setSelected((prev) => {
-      const groupSkills = prev[group] ?? [];
-
+  const toggleSkill = (category: string, skill: string) => {
+    setSelected(prev => {
+      const list = prev[category] || [];
       return {
         ...prev,
-        [group]: groupSkills.includes(skill)
-          ? groupSkills.filter((s) => s !== skill)
-          : [...groupSkills, skill],
+        [category]: list.includes(skill)
+          ? list.filter(s => s !== skill)
+          : [...list, skill],
       };
     });
   };
 
-  /* ================= SAVE SKILLS ================= */
-  const saveSkills = async () => {
-    if (!auth?.uid) return;
-
-    const hasAnySkill = Object.values(selected).some(
-      (arr) => arr.length > 0
-    );
-
-    if (!hasAnySkill) {
-      alert("Please select at least one skill");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      await updateDoc(doc(db, "users", auth.uid), {
-        skills: selected,
-      });
-
-      // 🔄 update local auth (optional but good UX)
-      const updatedAuth = {
-        ...auth,
-        skills: selected,
-      };
-      localStorage.setItem("auth", JSON.stringify(updatedAuth));
-
-      alert("✅ Skills updated successfully");
-      navigate("/worker/dashboard");
-    } catch (err) {
-      console.error("Save skills failed:", err);
-      alert("❌ Failed to save skills");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* ================= UI ================= */
   return (
-    <DashboardLayout>
-      <div className="max-w-5xl mx-auto space-y-10">
-        <div>
-          <h1 className="text-2xl font-bold">Add Your Skills</h1>
-          <p className="text-gray-600 mt-2">
-            Select all the work you can do. This helps us match you with
-            nearby jobs.
+    <div className="min-h-screen bg-gray-50 px-4 py-6">
+      <div className="max-w-5xl mx-auto space-y-6">
+
+        {/* 🔵 HERO */}
+        <div className="rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
+          <h1 className="text-2xl font-semibold">Add Your Skills</h1>
+          <p className="text-indigo-100 mt-1">
+            Select the work you can do. This helps us match you faster.
           </p>
         </div>
 
-        {Object.entries(SKILLS).map(([group, skills]) => (
-          <div key={group} className="space-y-4">
-            <h2 className="text-lg font-semibold capitalize">
-              {group} Services
-            </h2>
+        {/* 🧩 SKILL SECTIONS */}
+        {Object.entries(SKILLS).map(([category, skills]) => (
+          <div
+            key={category}
+            className="bg-white rounded-2xl shadow-sm border"
+          >
+            {/* Section Header */}
+            <button
+              onClick={() => setOpenSection(category as any)}
+              className="w-full flex justify-between items-center px-6 py-4 text-left"
+            >
+              <h3 className="font-semibold capitalize">
+                {category.replace("_", " ")} Services
+              </h3>
+              <span className="text-indigo-600">
+                {openSection === category ? "−" : "+"}
+              </span>
+            </button>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {skills.map((skill) => {
-                const active = selected[group]?.includes(skill);
-
-                return (
-                  <button
-                    key={skill}
-                    onClick={() => toggleSkill(group, skill)}
-                    className={`border rounded-lg px-4 py-2 text-sm transition text-left
-                      ${
-                        active
-                          ? "bg-indigo-600 text-white border-indigo-600"
-                          : "bg-white hover:border-indigo-400"
-                      }`}
-                  >
-                    {skill}
-                  </button>
-                );
-              })}
-            </div>
+            {/* Section Content */}
+            {openSection === category && (
+              <div className="px-6 pb-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {skills.map(skill => {
+                  const active = selected[category]?.includes(skill);
+                  return (
+                    <button
+                      key={skill}
+                      onClick={() => toggleSkill(category, skill)}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium border transition
+                        ${
+                          active
+                            ? "bg-indigo-600 text-white border-indigo-600 shadow"
+                            : "bg-gray-50 hover:bg-gray-100"
+                        }`}
+                    >
+                      {skill}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ))}
-
-        <Button
-          className="w-full"
-          onClick={saveSkills}
-          disabled={loading}
-        >
-          {loading ? "Saving..." : "Save Skills"}
-        </Button>
       </div>
-    </DashboardLayout>
+
+      {/* 🔒 STICKY FOOTER CTA */}
+        <div className="fixed bottom-8 left-0 right-0 bg-white border-t px-4 py-3 z-50">
+        <div className="max-w-5xl mx-auto flex justify-between items-center">
+          <p className="text-sm text-gray-500">
+            You can update skills anytime
+          </p>
+          <button
+            onClick={() => navigate("/worker/dashboard")}
+            className="bg-indigo-600 text-white px-6 py-2 rounded-xl hover:bg-indigo-700 transition"
+          >
+            Save & Continue
+          </button>
+        </div>
+      </div>
+
+    </div>
   );
 }
